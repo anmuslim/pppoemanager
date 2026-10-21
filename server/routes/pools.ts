@@ -39,9 +39,32 @@ router.get('/', async (req, res: Response) => {
   }
 });
 
+// Helper to find driver for a pool when router is 'all'
+async function resolvePoolTarget(routerId: string, poolName: string, explicitRouterId?: string) {
+  if (explicitRouterId && explicitRouterId !== 'all') {
+    const targets = await routerManager.getTargetDrivers(explicitRouterId);
+    if (targets.length > 0) return targets[0];
+  }
+  if (routerId !== 'all') {
+    const targets = await routerManager.getTargetDrivers(routerId);
+    if (targets.length > 0) return targets[0];
+  }
+  const all = await routerManager.getTargetDrivers('all');
+  for (const t of all) {
+    try {
+      const list = await t.driver.getPools();
+      if (list.some((p) => p.name === poolName)) {
+        return t;
+      }
+    } catch {}
+  }
+  return all[0];
+}
+
 // POST create pool
 router.post('/', async (req: AuthenticatedRequest, res: Response) => {
-  const routerId = (req.params as any).routerId;
+  const routerIdParam = (req.params as any).routerId;
+  const targetRouterId = (req.body.routerId && req.body.routerId !== 'all') ? req.body.routerId : routerIdParam;
   const { name, ranges, nextPool, comment } = req.body;
 
   if (!name || !ranges) {
@@ -56,7 +79,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    const targets = await routerManager.getTargetDrivers(routerId);
+    const targets = await routerManager.getTargetDrivers(targetRouterId);
     if (targets.length === 0) {
       return res.status(404).json({ success: false, error: 'Router tidak ditemukan.' });
     }
@@ -98,6 +121,7 @@ router.put('/:name', async (req: AuthenticatedRequest, res: Response) => {
   const routerId = (req.params as any).routerId;
   const poolName = req.params.name;
   const patch = req.body;
+  const explicitRouter = (patch.routerId && patch.routerId !== 'all') ? patch.routerId : (req.query.routerId as string);
 
   if (patch.ranges && !validateIpRange(patch.ranges)) {
     return res.status(400).json({
@@ -107,11 +131,11 @@ router.put('/:name', async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    const targets = await routerManager.getTargetDrivers(routerId);
-    if (targets.length === 0) {
+    const target = await resolvePoolTarget(routerId, poolName, explicitRouter);
+    if (!target) {
       return res.status(404).json({ success: false, error: 'Router tidak ditemukan.' });
     }
-    const { config, driver } = targets[0];
+    const { config, driver } = target;
 
     const updated = await driver.updatePool(poolName, patch);
 
@@ -135,13 +159,14 @@ router.put('/:name', async (req: AuthenticatedRequest, res: Response) => {
 router.delete('/:name', async (req: AuthenticatedRequest, res: Response) => {
   const routerId = (req.params as any).routerId;
   const poolName = req.params.name;
+  const explicitRouter = (req.query.routerId as string) || (req.body?.routerId && req.body.routerId !== 'all' ? req.body.routerId : undefined);
 
   try {
-    const targets = await routerManager.getTargetDrivers(routerId);
-    if (targets.length === 0) {
+    const target = await resolvePoolTarget(routerId, poolName, explicitRouter);
+    if (!target) {
       return res.status(404).json({ success: false, error: 'Router tidak ditemukan.' });
     }
-    const { config, driver } = targets[0];
+    const { config, driver } = target;
 
     await driver.deletePool(poolName);
 

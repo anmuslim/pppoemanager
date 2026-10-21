@@ -260,13 +260,25 @@ export const ProfilesView: React.FC = () => {
       },
       {
         accessorKey: 'secretCount',
-        header: 'Pemakai (Secrets)',
-        cell: ({ getValue }) => {
-          const count = Number(getValue()) || 0;
+        header: 'Pemakai (Total / Online)',
+        cell: ({ row }) => {
+          const count = Number(row.original.secretCount) || 0;
+          const active = Number(row.original.activeCount) || 0;
           return (
-            <div className="flex items-center gap-1 text-slate-700 dark:text-zinc-300 font-mono font-semibold">
-              <Users className="w-3.5 h-3.5 text-slate-400" />
-              <span>{count} user</span>
+            <div className="flex items-center gap-1.5 font-mono">
+              <div className="flex items-center gap-1 text-slate-800 dark:text-zinc-200 font-semibold" title="Total akun PPP Secrets dengan profile ini">
+                <Users className="w-3.5 h-3.5 text-slate-400" />
+                <span>{count}</span>
+              </div>
+              {active > 0 ? (
+                <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold" title="Pengguna aktif online sekarang">
+                  {active} online
+                </span>
+              ) : (
+                <span className="text-[10px] text-slate-400" title="Tidak ada yang sedang online">
+                  (0 online)
+                </span>
+              )}
             </div>
           );
         },

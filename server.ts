@@ -11,6 +11,7 @@ import queuesRoutes from './server/routes/queues.js';
 import poolsRoutes from './server/routes/pools.js';
 import overviewRoutes from './server/routes/overview.js';
 import auditRoutes from './server/routes/audit.js';
+import usersRoutes from './server/routes/users.js';
 import { requireAuth } from './server/auth.js';
 
 dotenv.config();
@@ -50,6 +51,7 @@ async function startServer() {
   app.use('/api/overview', requireAuth, overviewRoutes);
   app.use('/api/audit-logs', requireAuth, auditRoutes);
   app.use('/api/demo', requireAuth, auditRoutes);
+  app.use('/api/users', requireAuth, usersRoutes);
 
   // Health check endpoint
   app.get('/api/health', (_req, res) => {

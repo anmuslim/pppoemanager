@@ -24,7 +24,8 @@ router.get('/', async (req, res: Response) => {
 
 // POST create secret
 router.post('/', async (req: AuthenticatedRequest, res: Response) => {
-  const routerId = (req.params as any).routerId;
+  const routerIdParam = (req.params as any).routerId;
+  const targetRouterId = (req.body.routerId && req.body.routerId !== 'all') ? req.body.routerId : routerIdParam;
   const { name, password, service, profile, localAddress, remoteAddress, callerId, disabled, comment } = req.body;
 
   if (!name) {
@@ -32,7 +33,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    const targets = await routerManager.getTargetDrivers(routerId);
+    const targets = await routerManager.getTargetDrivers(targetRouterId);
     if (targets.length === 0) {
       return res.status(404).json({ success: false, error: 'Router tidak ditemukan.' });
     }
@@ -66,18 +67,42 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
+// Helper to find driver for an item when router is 'all'
+async function resolveSecretTarget(routerId: string, secretName: string, explicitRouterId?: string) {
+  if (explicitRouterId && explicitRouterId !== 'all') {
+    const targets = await routerManager.getTargetDrivers(explicitRouterId);
+    if (targets.length > 0) return targets[0];
+  }
+  if (routerId !== 'all') {
+    const targets = await routerManager.getTargetDrivers(routerId);
+    if (targets.length > 0) return targets[0];
+  }
+  // Search across all routers
+  const all = await routerManager.getTargetDrivers('all');
+  for (const t of all) {
+    try {
+      const list = await t.driver.getSecrets();
+      if (list.some((s) => s.name === secretName)) {
+        return t;
+      }
+    } catch {}
+  }
+  return all[0];
+}
+
 // PUT update secret
 router.put('/:name', async (req: AuthenticatedRequest, res: Response) => {
   const routerId = (req.params as any).routerId;
   const secretName = req.params.name;
   const patch = req.body;
+  const explicitRouter = (patch.routerId && patch.routerId !== 'all') ? patch.routerId : (req.query.routerId as string);
 
   try {
-    const targets = await routerManager.getTargetDrivers(routerId);
-    if (targets.length === 0) {
+    const target = await resolveSecretTarget(routerId, secretName, explicitRouter);
+    if (!target) {
       return res.status(404).json({ success: false, error: 'Router tidak ditemukan.' });
     }
-    const { config, driver } = targets[0];
+    const { config, driver } = target;
 
     const updated = await driver.updateSecret(secretName, patch);
 
@@ -101,13 +126,14 @@ router.put('/:name', async (req: AuthenticatedRequest, res: Response) => {
 router.delete('/:name', async (req: AuthenticatedRequest, res: Response) => {
   const routerId = (req.params as any).routerId;
   const secretName = req.params.name;
+  const explicitRouter = (req.query.routerId as string) || (req.body?.routerId && req.body.routerId !== 'all' ? req.body.routerId : undefined);
 
   try {
-    const targets = await routerManager.getTargetDrivers(routerId);
-    if (targets.length === 0) {
+    const target = await resolveSecretTarget(routerId, secretName, explicitRouter);
+    if (!target) {
       return res.status(404).json({ success: false, error: 'Router tidak ditemukan.' });
     }
-    const { config, driver } = targets[0];
+    const { config, driver } = target;
 
     await driver.deleteSecret(secretName);
 

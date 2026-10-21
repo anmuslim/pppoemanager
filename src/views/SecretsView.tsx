@@ -23,6 +23,7 @@ import {
   Layers,
   FileSpreadsheet,
   AlertTriangle,
+  Users,
 } from 'lucide-react';
 
 export const SecretsView: React.FC = () => {
@@ -33,6 +34,16 @@ export const SecretsView: React.FC = () => {
   const [profiles, setProfiles] = useState<PppProfile[]>([]);
   const [activeSessions, setActiveSessions] = useState<PppActive[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Profile usage lookup map
+  const profileUsageCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    secrets.forEach((s) => {
+      const p = s.profile || 'default';
+      counts[p] = (counts[p] || 0) + 1;
+    });
+    return counts;
+  }, [secrets]);
 
   // Revealed passwords set
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
@@ -595,18 +606,29 @@ export const SecretsView: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Profile *</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300">Profile *</label>
+                {formData.profile && (
+                  <span className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold flex items-center gap-1 font-mono">
+                    <Users className="w-3 h-3" />
+                    <span>{profileUsageCounts[formData.profile] ?? 0} pemakai</span>
+                  </span>
+                )}
+              </div>
               <select
                 value={formData.profile || 'default'}
                 onChange={(e) => setFormData({ ...formData, profile: e.target.value })}
                 className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 focus:outline-hidden"
               >
-                {profiles.map((p) => (
-                  <option key={p.name} value={p.name}>
-                    {p.name} {p.rateLimit ? `(${p.rateLimit})` : ''}
-                  </option>
-                ))}
-                {profiles.length === 0 && <option value="default">default</option>}
+                {profiles.map((p) => {
+                  const count = profileUsageCounts[p.name] ?? p.secretCount ?? 0;
+                  return (
+                    <option key={p.name} value={p.name}>
+                      {p.name} {p.rateLimit ? `• ${p.rateLimit}` : ''} ({count} pengguna)
+                    </option>
+                  );
+                })}
+                {profiles.length === 0 && <option value="default">default (0 pengguna)</option>}
               </select>
             </div>
 
@@ -792,11 +814,14 @@ export const SecretsView: React.FC = () => {
               <option value="" disabled>
                 -- Pilih Profile --
               </option>
-              {profiles.map((p) => (
-                <option key={p.name} value={p.name}>
-                  {p.name} {p.rateLimit ? `(${p.rateLimit})` : ''}
-                </option>
-              ))}
+              {profiles.map((p) => {
+                const count = profileUsageCounts[p.name] ?? p.secretCount ?? 0;
+                return (
+                  <option key={p.name} value={p.name}>
+                    {p.name} {p.rateLimit ? `• ${p.rateLimit}` : ''} ({count} pengguna saat ini)
+                  </option>
+                );
+              })}
             </select>
           </div>
 

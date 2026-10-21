@@ -6,25 +6,105 @@ import { PppProfile } from '../drivers/types.js';
 
 const router = Router({ mergeParams: true });
 
-// GET profiles
+// GET profiles with accurate secret and active connection counts
 router.get('/', async (req, res: Response) => {
   const routerId = (req.params as any).routerId;
   try {
-    const { data, errors } = await routerManager.executeOnRouters<PppProfile>(
-      routerId,
-      async (driver) => {
-        return driver.getProfiles();
-      }
-    );
-    res.json({ success: true, data, errors: Object.keys(errors).length > 0 ? errors : undefined });
+    const [profilesRes, secretsRes, activeRes] = await Promise.all([
+      routerManager.executeOnRouters<PppProfile>(routerId, async (driver) => driver.getProfiles()),
+      routerManager.executeOnRouters<any>(routerId, async (driver) => driver.getSecrets()).catch(() => ({ data: [], errors: {} })),
+      routerManager.executeOnRouters<any>(routerId, async (driver) => driver.getActive()).catch(() => ({ data: [], errors: {} })),
+    ]);
+
+    const secrets = secretsRes.data || [];
+    const active = activeRes.data || [];
+
+    // Map secret username to profile
+    const userToProfile = new Map<string, string>();
+    for (const s of secrets) {
+      const profName = s.profile || 'default';
+      userToProfile.set(`${s.routerId || ''}:::${s.name}`, profName);
+      userToProfile.set(s.name, profName);
+    }
+
+    // Tally secret counts by router+profile and by profile
+    const secretCountsByRouterAndProfile = new Map<string, number>();
+    const secretCountsByProfile = new Map<string, number>();
+
+    for (const s of secrets) {
+      const profName = s.profile || 'default';
+      secretCountsByProfile.set(profName, (secretCountsByProfile.get(profName) || 0) + 1);
+      const compositeKey = `${s.routerId || ''}:::${profName}`;
+      secretCountsByRouterAndProfile.set(compositeKey, (secretCountsByRouterAndProfile.get(compositeKey) || 0) + 1);
+    }
+
+    // Tally active session counts by profile
+    const activeCountsByRouterAndProfile = new Map<string, number>();
+    const activeCountsByProfile = new Map<string, number>();
+
+    for (const a of active) {
+      const profName =
+        userToProfile.get(`${a.routerId || ''}:::${a.name}`) ||
+        userToProfile.get(a.name) ||
+        'default';
+      activeCountsByProfile.set(profName, (activeCountsByProfile.get(profName) || 0) + 1);
+      const compositeKey = `${a.routerId || ''}:::${profName}`;
+      activeCountsByRouterAndProfile.set(compositeKey, (activeCountsByRouterAndProfile.get(compositeKey) || 0) + 1);
+    }
+
+    const enrichedProfiles = profilesRes.data.map((p) => {
+      const compositeKey = `${p.routerId || ''}:::${p.name}`;
+      const secCount = secretCountsByRouterAndProfile.has(compositeKey)
+        ? (secretCountsByRouterAndProfile.get(compositeKey) || 0)
+        : (secretCountsByProfile.get(p.name) || 0);
+
+      const actCount = activeCountsByRouterAndProfile.has(compositeKey)
+        ? (activeCountsByRouterAndProfile.get(compositeKey) || 0)
+        : (activeCountsByProfile.get(p.name) || 0);
+
+      return {
+        ...p,
+        secretCount: secCount,
+        activeCount: actCount,
+      };
+    });
+
+    res.json({
+      success: true,
+      data: enrichedProfiles,
+      errors: Object.keys(profilesRes.errors).length > 0 ? profilesRes.errors : undefined,
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Gagal mengambil data profile' });
   }
 });
 
+// Helper to find driver for a profile when router is 'all'
+async function resolveProfileTarget(routerId: string, profileName: string, explicitRouterId?: string) {
+  if (explicitRouterId && explicitRouterId !== 'all') {
+    const targets = await routerManager.getTargetDrivers(explicitRouterId);
+    if (targets.length > 0) return targets[0];
+  }
+  if (routerId !== 'all') {
+    const targets = await routerManager.getTargetDrivers(routerId);
+    if (targets.length > 0) return targets[0];
+  }
+  const all = await routerManager.getTargetDrivers('all');
+  for (const t of all) {
+    try {
+      const list = await t.driver.getProfiles();
+      if (list.some((p) => p.name === profileName)) {
+        return t;
+      }
+    } catch {}
+  }
+  return all[0];
+}
+
 // POST create profile
 router.post('/', async (req: AuthenticatedRequest, res: Response) => {
-  const routerId = (req.params as any).routerId;
+  const routerIdParam = (req.params as any).routerId;
+  const targetRouterId = (req.body.routerId && req.body.routerId !== 'all') ? req.body.routerId : routerIdParam;
   const { name, localAddress, remoteAddress, rateLimit, parentQueue, onlyOne, dnsServer, comment } = req.body;
 
   if (!name) {
@@ -32,7 +112,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    const targets = await routerManager.getTargetDrivers(routerId);
+    const targets = await routerManager.getTargetDrivers(targetRouterId);
     if (targets.length === 0) {
       return res.status(404).json({ success: false, error: 'Router tidak ditemukan.' });
     }
@@ -70,13 +150,14 @@ router.put('/:name', async (req: AuthenticatedRequest, res: Response) => {
   const routerId = (req.params as any).routerId;
   const profileName = req.params.name;
   const patch = req.body;
+  const explicitRouter = (patch.routerId && patch.routerId !== 'all') ? patch.routerId : (req.query.routerId as string);
 
   try {
-    const targets = await routerManager.getTargetDrivers(routerId);
-    if (targets.length === 0) {
+    const target = await resolveProfileTarget(routerId, profileName, explicitRouter);
+    if (!target) {
       return res.status(404).json({ success: false, error: 'Router tidak ditemukan.' });
     }
-    const { config, driver } = targets[0];
+    const { config, driver } = target;
 
     const updated = await driver.updateProfile(profileName, patch);
 
@@ -100,13 +181,14 @@ router.put('/:name', async (req: AuthenticatedRequest, res: Response) => {
 router.delete('/:name', async (req: AuthenticatedRequest, res: Response) => {
   const routerId = (req.params as any).routerId;
   const profileName = req.params.name;
+  const explicitRouter = (req.query.routerId as string) || (req.body?.routerId && req.body.routerId !== 'all' ? req.body.routerId : undefined);
 
   try {
-    const targets = await routerManager.getTargetDrivers(routerId);
-    if (targets.length === 0) {
+    const target = await resolveProfileTarget(routerId, profileName, explicitRouter);
+    if (!target) {
       return res.status(404).json({ success: false, error: 'Router tidak ditemukan.' });
     }
-    const { config, driver } = targets[0];
+    const { config, driver } = target;
 
     await driver.deleteProfile(profileName);
 

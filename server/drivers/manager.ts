@@ -33,6 +33,10 @@ class RouterConnectionManager {
     this.driverCache.delete(routerId);
   }
 
+  public clearAllDrivers() {
+    this.driverCache.clear();
+  }
+
   public getRouterSummaries(): RouterSummary[] {
     const routers = storage.getRouters();
     return routers.map((r) => ({

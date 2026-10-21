@@ -1,0 +1,498 @@
+{
+  "routers": [
+    {
+      "id": "router-core-idc",
+      "name": "Router-Core-IDC",
+      "host": "10.100.1.1",
+      "port": 443,
+      "username": "api-pppoe",
+      "encryptedPassword": "60938f538e51d3775e874d6d29359cb1:b582bb4f3252d3eadddada8a2a0c3475ab8606b57b47dec16c9d5137bdbca177",
+      "mode": "REST",
+      "notes": "Core CCR2004 di Cyber IDC Lt. 2 (Koneksi REST API v7)",
+      "isDemo": true,
+      "status": "online",
+      "lastSeen": "2026-10-21T02:33:37.679Z",
+      "identity": "Mikrotik-Core-IDC",
+      "version": "RouterOS v7.14.3 (stable)",
+      "uptime": "28d 8h 33m",
+      "cpuLoad": 21,
+      "freeMemory": 3120,
+      "totalMemory": 4096,
+      "boardName": "CCR2004-16G-2S+"
+    },
+    {
+      "id": "router-dist-utama",
+      "name": "Router-Dist-Utama",
+      "host": "10.100.2.1",
+      "port": 8728,
+      "username": "api-admin",
+      "encryptedPassword": "60938f538e51d3775e874d6d29359cb1:b582bb4f3252d3eadddada8a2a0c3475ab8606b57b47dec16c9d5137bdbca177",
+      "mode": "API",
+      "notes": "Distribusi Utama BSD City - RB4011 (Koneksi Winbox API port 8728)",
+      "isDemo": true,
+      "status": "online",
+      "lastSeen": "2026-10-21T02:33:37.679Z",
+      "identity": "Mikrotik-Dist-BSD",
+      "version": "RouterOS v7.13.5 (stable)",
+      "uptime": "28d 8h 33m",
+      "cpuLoad": 20,
+      "freeMemory": 742,
+      "totalMemory": 1024,
+      "boardName": "RB4011iGS+"
+    },
+    {
+      "id": "router-pop-barat",
+      "name": "Router-POP-Barat",
+      "host": "10.100.3.1",
+      "port": 8729,
+      "username": "api-ssl-user",
+      "encryptedPassword": "60938f538e51d3775e874d6d29359cb1:b582bb4f3252d3eadddada8a2a0c3475ab8606b57b47dec16c9d5137bdbca177",
+      "mode": "API-SSL",
+      "notes": "POP Kalideres Tower A - RB760iGS (API-SSL port 8729)",
+      "isDemo": true,
+      "status": "online",
+      "lastSeen": "2026-10-21T02:33:37.679Z",
+      "identity": "Mikrotik-POP-Barat",
+      "version": "RouterOS v7.12.1 (stable)",
+      "uptime": "28d 8h 33m",
+      "cpuLoad": 13,
+      "freeMemory": 382,
+      "totalMemory": 512,
+      "boardName": "RB760iGS (hEX S)"
+    },
+    {
+      "id": "router-1792549865641-8s3f",
+      "name": "Router-Test-New",
+      "host": "192.168.88.1",
+      "port": 8728,
+      "username": "admin",
+      "mode": "DEMO",
+      "notes": "",
+      "isDemo": true,
+      "status": "online",
+      "lastSeen": "2026-10-21T02:33:37.679Z"
+    }
+  ],
+  "users": [
+    {
+      "id": "user-admin-1",
+      "username": "admin",
+      "name": "Administrator Utama",
+      "role": "superadmin",
+      "passwordHash": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+      "createdAt": "2026-10-21T01:32:00.550Z",
+      "allowedMenus": [
+        "dashboard",
+        "routers",
+        "secrets",
+        "active",
+        "profiles",
+        "queues",
+        "pools",
+        "audit",
+        "users"
+      ],
+      "status": "active",
+      "lastLogin": "2026-10-21T02:33:46.370Z"
+    },
+    {
+      "id": "user-1792547102771-bk0w",
+      "username": "operator1",
+      "name": "Operator Lapangan",
+      "role": "operator",
+      "passwordHash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
+      "allowedMenus": [
+        "dashboard",
+        "active",
+        "secrets"
+      ],
+      "status": "active",
+      "createdAt": "2026-10-21T01:45:02.771Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "username": "admin",
+      "routerId": "router-core-idc",
+      "routerName": "Router-Core-IDC",
+      "action": "UPDATE",
+      "targetType": "SECRET",
+      "targetName": "testuser99",
+      "details": "Memperbarui secret 'testuser99'",
+      "id": "log-1792550026397-ehrh",
+      "timestamp": "2026-10-21T02:33:46.397Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "router-core-idc",
+      "routerName": "Router-Core-IDC",
+      "action": "UPDATE",
+      "targetType": "SECRET",
+      "targetName": "testuser99",
+      "details": "Memperbarui secret 'testuser99'",
+      "id": "log-1792550026384-bnbs",
+      "timestamp": "2026-10-21T02:33:46.384Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792550026371-wo18",
+      "timestamp": "2026-10-21T02:33:46.371Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "router-core-idc",
+      "routerName": "Router-Core-IDC",
+      "action": "CREATE",
+      "targetType": "SECRET",
+      "targetName": "testuser100",
+      "details": "Membuat secret baru 'testuser100' dengan profile 'profile-10M-Rumah'",
+      "id": "log-1792550021223-c6o7",
+      "timestamp": "2026-10-21T02:33:41.223Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792550021207-mt3h",
+      "timestamp": "2026-10-21T02:33:41.207Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "router-core-idc",
+      "routerName": "Router-Core-IDC",
+      "action": "CREATE",
+      "targetType": "SECRET",
+      "targetName": "testuser99",
+      "details": "Membuat secret baru 'testuser99' dengan profile 'profile-10M-Rumah'",
+      "id": "log-1792550017585-8r3z",
+      "timestamp": "2026-10-21T02:33:37.585Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792550017572-19on",
+      "timestamp": "2026-10-21T02:33:37.572Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792550013431-y3kx",
+      "timestamp": "2026-10-21T02:33:33.431Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792550010047-igrj",
+      "timestamp": "2026-10-21T02:33:30.047Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792550006257-wzhe",
+      "timestamp": "2026-10-21T02:33:26.257Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "router-1792549865641-8s3f",
+      "routerName": "Router-Test-New",
+      "action": "CREATE",
+      "targetType": "ROUTER",
+      "targetName": "Router-Test-New",
+      "details": "Menambahkan router baru Router-Test-New (192.168.88.1:8728) dengan mode DEMO",
+      "id": "log-1792549865641-7hf9",
+      "timestamp": "2026-10-21T02:31:05.641Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792549865616-tcy9",
+      "timestamp": "2026-10-21T02:31:05.616Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "router-core-idc",
+      "routerName": "Router-Core-IDC",
+      "action": "DELETE",
+      "targetType": "SECRET",
+      "targetName": "bsd-residence-002",
+      "details": "Menghapus secret 'bsd-residence-002'",
+      "id": "log-1792549857298-4kov",
+      "timestamp": "2026-10-21T02:30:57.298Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792549857280-zzt8",
+      "timestamp": "2026-10-21T02:30:57.280Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792549853030-ygig",
+      "timestamp": "2026-10-21T02:30:53.030Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "router-core-idc",
+      "routerName": "Router-Core-IDC",
+      "action": "CREATE",
+      "targetType": "SECRET",
+      "targetName": "test-user-all-1",
+      "details": "Membuat secret baru 'test-user-all-1' dengan profile 'profile-10M-Rumah'",
+      "id": "log-1792549846964-x17n",
+      "timestamp": "2026-10-21T02:30:46.964Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792549846950-krwa",
+      "timestamp": "2026-10-21T02:30:46.950Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "router-core-idc",
+      "routerName": "Router-Core-IDC",
+      "action": "CREATE",
+      "targetType": "SECRET",
+      "targetName": "test-user-999",
+      "details": "Membuat secret baru 'test-user-999' dengan profile 'profile-10M-Rumah'",
+      "id": "log-1792549841938-18ew",
+      "timestamp": "2026-10-21T02:30:41.938Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792549841916-tnje",
+      "timestamp": "2026-10-21T02:30:41.916Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792547106419-dob9",
+      "timestamp": "2026-10-21T01:45:06.419Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "CREATE",
+      "targetType": "ROUTER",
+      "targetName": "operator1",
+      "details": "Membuat akun user baru 'operator1' (Operator Lapangan) dengan peran 'operator' dan akses: [dashboard, active, secrets]",
+      "id": "log-1792547102771-lpgw",
+      "timestamp": "2026-10-21T01:45:02.771Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792547102756-i6ai",
+      "timestamp": "2026-10-21T01:45:02.756Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792547099058-d4xa",
+      "timestamp": "2026-10-21T01:44:59.058Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792547094753-bx7k",
+      "timestamp": "2026-10-21T01:44:54.753Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792547091325-os4o",
+      "timestamp": "2026-10-21T01:44:51.325Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna 'admin' (Administrator Utama) berhasil masuk ke sistem",
+      "id": "log-1792547086761-mjvd",
+      "timestamp": "2026-10-21T01:44:46.761Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna berhasil masuk ke sistem PPPoE Manager",
+      "id": "log-1792546442738-aibl",
+      "timestamp": "2026-10-21T01:34:02.738Z"
+    },
+    {
+      "username": "admin",
+      "routerId": "system",
+      "routerName": "Sistem",
+      "action": "TEST",
+      "targetType": "ROUTER",
+      "targetName": "admin",
+      "details": "Pengguna berhasil masuk ke sistem PPPoE Manager",
+      "id": "log-1792546332381-zkl4",
+      "timestamp": "2026-10-21T01:32:12.381Z"
+    },
+    {
+      "id": "log-1",
+      "timestamp": "2026-10-20T23:32:00.552Z",
+      "username": "admin",
+      "routerId": "router-core-idc",
+      "routerName": "Router-Core-IDC",
+      "action": "UPDATE",
+      "targetType": "PROFILE",
+      "targetName": "profile-100M-Bisnis",
+      "details": "Mengubah rate limit menjadi 100M/100M dengan burst"
+    },
+    {
+      "id": "log-2",
+      "timestamp": "2026-10-20T21:32:00.552Z",
+      "username": "admin",
+      "routerId": "router-dist-utama",
+      "routerName": "Router-Dist-Utama",
+      "action": "CREATE",
+      "targetType": "SECRET",
+      "targetName": "bsd-residence-079",
+      "details": "Pendaftaran pelanggan baru paket 20M-Family"
+    },
+    {
+      "id": "log-3",
+      "timestamp": "2026-10-20T18:32:00.552Z",
+      "username": "admin",
+      "routerId": "router-core-idc",
+      "routerName": "Router-Core-IDC",
+      "action": "DISCONNECT",
+      "targetType": "ACTIVE",
+      "targetName": "cust-idc-014",
+      "details": "Sesi di-kick oleh admin untuk sinkronisasi profile"
+    }
+  ],
+  "recentEvents": [
+    {
+      "id": "evt-1",
+      "timestamp": "2026-10-21T01:28:00.552Z",
+      "type": "connected",
+      "username": "cust-idc-008",
+      "routerName": "Router-Core-IDC",
+      "ipAddress": "10.10.10.12"
+    },
+    {
+      "id": "evt-2",
+      "timestamp": "2026-10-21T01:20:00.552Z",
+      "type": "connected",
+      "username": "bsd-residence-045",
+      "routerName": "Router-Dist-Utama",
+      "ipAddress": "10.20.20.47"
+    },
+    {
+      "id": "evt-3",
+      "timestamp": "2026-10-21T01:07:00.552Z",
+      "type": "disconnected",
+      "username": "pop-barat-014",
+      "routerName": "Router-POP-Barat",
+      "ipAddress": "10.30.10.16"
+    },
+    {
+      "id": "evt-4",
+      "timestamp": "2026-10-21T00:54:00.552Z",
+      "type": "connected",
+      "username": "cyber-022",
+      "routerName": "Router-Core-IDC",
+      "ipAddress": "10.10.20.24"
+    },
+    {
+      "id": "evt-5",
+      "timestamp": "2026-10-21T00:37:00.552Z",
+      "type": "disconnected",
+      "username": "pt-sinar-032",
+      "routerName": "Router-Core-IDC",
+      "ipAddress": "10.10.30.34"
+    }
+  ]
+}

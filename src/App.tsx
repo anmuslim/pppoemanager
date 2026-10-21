@@ -13,6 +13,7 @@ import { ProfilesView } from './views/ProfilesView.tsx';
 import { QueuesView } from './views/QueuesView.tsx';
 import { PoolsView } from './views/PoolsView.tsx';
 import { AuditLogView } from './views/AuditLogView.tsx';
+import { UsersView } from './views/UsersView.tsx';
 import { LoginView } from './views/LoginView.tsx';
 import { Loader2 } from 'lucide-react';
 
@@ -20,6 +21,15 @@ const MainLayout: React.FC = () => {
   const { user, loading } = useAuth();
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Auto redirect if current tab is restricted for this user
+  React.useEffect(() => {
+    if (user && user.role !== 'superadmin' && user.allowedMenus && user.allowedMenus.length > 0) {
+      if (!user.allowedMenus.includes(currentTab)) {
+        setCurrentTab(user.allowedMenus[0] as NavTab);
+      }
+    }
+  }, [user, currentTab]);
 
   if (loading) {
     return (
@@ -58,6 +68,7 @@ const MainLayout: React.FC = () => {
             {currentTab === 'queues' && <QueuesView />}
             {currentTab === 'pools' && <PoolsView />}
             {currentTab === 'audit' && <AuditLogView />}
+            {currentTab === 'users' && <UsersView />}
           </main>
         </div>
       </div>

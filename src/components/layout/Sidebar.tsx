@@ -11,8 +11,10 @@ import {
   X,
   Radio,
   Server,
+  Users,
 } from 'lucide-react';
 import { useRouterContext } from '../../context/RouterContext.tsx';
+import { useAuth } from '../../context/AuthContext.tsx';
 
 export type NavTab =
   | 'dashboard'
@@ -22,7 +24,8 @@ export type NavTab =
   | 'profiles'
   | 'queues'
   | 'pools'
-  | 'audit';
+  | 'audit'
+  | 'users';
 
 interface SidebarProps {
   currentTab: NavTab;
@@ -89,7 +92,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: <History className="w-4 h-4" />,
       sublabel: 'Audit Log & Catatan',
     },
+    {
+      id: 'users' as NavTab,
+      label: 'Manajemen User',
+      icon: <Users className="w-4 h-4" />,
+      sublabel: 'Hak Akses & Akun',
+    },
   ];
+
+  const { user } = useAuth();
+  const isSuperadmin = user?.role === 'superadmin';
+  const allowedMenus = user?.allowedMenus || ['dashboard'];
+
+  const visibleNavItems = navItems.filter((item) => {
+    if (isSuperadmin) return true;
+    return allowedMenus.includes(item.id);
+  });
 
   const content = (
     <div className="h-full flex flex-col justify-between p-3 select-none">
@@ -107,7 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Navigation list */}
         <nav className="space-y-1">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = currentTab === item.id;
             return (
               <button

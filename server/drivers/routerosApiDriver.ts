@@ -44,11 +44,35 @@ export class RouterosApiDriver implements IRouterDriver {
       const args: any[] = [];
       for (const [k, v] of Object.entries(params)) {
         if (v !== undefined) {
-          args.push(`?=${k}=${v}`);
+          args.push(`=${k}=${v}`);
         }
       }
       const res = await conn.write(cmd, args);
       return Array.isArray(res) ? res : [res];
+    } finally {
+      try {
+        await conn.close();
+      } catch {}
+    }
+  }
+
+  private async findItemId(menu: string, name: string): Promise<string> {
+    const conn = await this.getClient();
+    try {
+      let items: any[] = [];
+      try {
+        const queryRes = await conn.write(`/${menu}/print`, [`?name=${name}`]);
+        items = Array.isArray(queryRes) ? queryRes : [queryRes];
+      } catch {
+        // fallback to full print
+        const allRes = await conn.write(`/${menu}/print`);
+        items = Array.isArray(allRes) ? allRes : [allRes];
+      }
+      const match = items.find((item: any) => item && (item.name === name || item['.id'] === name));
+      if (!match || !match['.id']) {
+        throw new Error(`Item '${name}' tidak ditemukan di router.`);
+      }
+      return match['.id'];
     } finally {
       try {
         await conn.close();
@@ -141,9 +165,9 @@ export class RouterosApiDriver implements IRouterDriver {
   }
 
   async updateSecret(name: string, secret: Partial<PppSecret>): Promise<PppSecret> {
-    const params: Record<string, any> = {
-      numbers: name,
-    };
+    const id = await this.findItemId('ppp/secret', name);
+    const params: Record<string, any> = { '.id': id };
+    if (secret.name !== undefined && secret.name !== name) params.name = secret.name;
     if (secret.password !== undefined) params.password = secret.password;
     if (secret.service !== undefined) params.service = secret.service;
     if (secret.profile !== undefined) params.profile = secret.profile;
@@ -154,17 +178,19 @@ export class RouterosApiDriver implements IRouterDriver {
     if (secret.disabled !== undefined) params.disabled = secret.disabled ? 'yes' : 'no';
 
     await this.runCommand('ppp/secret', 'set', params);
-    return { name, ...secret, routerId: this.config.id, routerName: this.config.name } as PppSecret;
+    return { name: secret.name || name, ...secret, routerId: this.config.id, routerName: this.config.name } as PppSecret;
   }
 
   async deleteSecret(name: string): Promise<boolean> {
-    await this.runCommand('ppp/secret', 'remove', { numbers: name });
+    const id = await this.findItemId('ppp/secret', name);
+    await this.runCommand('ppp/secret', 'remove', { '.id': id });
     return true;
   }
 
   async setSecretDisabled(name: string, disabled: boolean): Promise<boolean> {
+    const id = await this.findItemId('ppp/secret', name);
     const action = disabled ? 'disable' : 'enable';
-    await this.runCommand('ppp/secret', action, { numbers: name });
+    await this.runCommand('ppp/secret', action, { '.id': id });
     return true;
   }
 
@@ -183,7 +209,8 @@ export class RouterosApiDriver implements IRouterDriver {
   }
 
   async disconnectActive(name: string): Promise<boolean> {
-    await this.runCommand('ppp/active', 'remove', { numbers: name });
+    const id = await this.findItemId('ppp/active', name);
+    await this.runCommand('ppp/active', 'remove', { '.id': id });
     return true;
   }
 
@@ -220,7 +247,9 @@ export class RouterosApiDriver implements IRouterDriver {
   }
 
   async updateProfile(name: string, profile: Partial<PppProfile>): Promise<PppProfile> {
-    const params: Record<string, any> = { numbers: name };
+    const id = await this.findItemId('ppp/profile', name);
+    const params: Record<string, any> = { '.id': id };
+    if (profile.name !== undefined && profile.name !== name) params.name = profile.name;
     if (profile.localAddress !== undefined) params['local-address'] = profile.localAddress;
     if (profile.remoteAddress !== undefined) params['remote-address'] = profile.remoteAddress;
     if (profile.rateLimit !== undefined) params['rate-limit'] = profile.rateLimit;
@@ -230,11 +259,12 @@ export class RouterosApiDriver implements IRouterDriver {
     if (profile.comment !== undefined) params.comment = profile.comment;
 
     await this.runCommand('ppp/profile', 'set', params);
-    return { name, ...profile, routerId: this.config.id, routerName: this.config.name } as PppProfile;
+    return { name: profile.name || name, ...profile, routerId: this.config.id, routerName: this.config.name } as PppProfile;
   }
 
   async deleteProfile(name: string): Promise<boolean> {
-    await this.runCommand('ppp/profile', 'remove', { numbers: name });
+    const id = await this.findItemId('ppp/profile', name);
+    await this.runCommand('ppp/profile', 'remove', { '.id': id });
     return true;
   }
 
@@ -269,7 +299,9 @@ export class RouterosApiDriver implements IRouterDriver {
   }
 
   async updateQueue(name: string, queue: Partial<SimpleQueue>): Promise<SimpleQueue> {
-    const params: Record<string, any> = { numbers: name };
+    const id = await this.findItemId('queue/simple', name);
+    const params: Record<string, any> = { '.id': id };
+    if (queue.name !== undefined && queue.name !== name) params.name = queue.name;
     if (queue.target !== undefined) params.target = queue.target;
     if (queue.maxLimit !== undefined) params['max-limit'] = queue.maxLimit;
     if (queue.limitAt !== undefined) params['limit-at'] = queue.limitAt;
@@ -278,11 +310,12 @@ export class RouterosApiDriver implements IRouterDriver {
     if (queue.comment !== undefined) params.comment = queue.comment;
 
     await this.runCommand('queue/simple', 'set', params);
-    return { name, ...queue, routerId: this.config.id, routerName: this.config.name } as SimpleQueue;
+    return { name: queue.name || name, ...queue, routerId: this.config.id, routerName: this.config.name } as SimpleQueue;
   }
 
   async deleteQueue(name: string): Promise<boolean> {
-    await this.runCommand('queue/simple', 'remove', { numbers: name });
+    const id = await this.findItemId('queue/simple', name);
+    await this.runCommand('queue/simple', 'remove', { '.id': id });
     return true;
   }
 
@@ -311,17 +344,20 @@ export class RouterosApiDriver implements IRouterDriver {
   }
 
   async updatePool(name: string, pool: Partial<IpPool>): Promise<IpPool> {
-    const params: Record<string, any> = { numbers: name };
+    const id = await this.findItemId('ip/pool', name);
+    const params: Record<string, any> = { '.id': id };
+    if (pool.name !== undefined && pool.name !== name) params.name = pool.name;
     if (pool.ranges !== undefined) params.ranges = pool.ranges;
     if (pool.nextPool !== undefined) params['next-pool'] = pool.nextPool || 'none';
     if (pool.comment !== undefined) params.comment = pool.comment;
 
     await this.runCommand('ip/pool', 'set', params);
-    return { name, ...pool, routerId: this.config.id, routerName: this.config.name } as IpPool;
+    return { name: pool.name || name, ...pool, routerId: this.config.id, routerName: this.config.name } as IpPool;
   }
 
   async deletePool(name: string): Promise<boolean> {
-    await this.runCommand('ip/pool', 'remove', { numbers: name });
+    const id = await this.findItemId('ip/pool', name);
+    await this.runCommand('ip/pool', 'remove', { '.id': id });
     return true;
   }
 }

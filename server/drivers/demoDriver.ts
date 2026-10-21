@@ -8,6 +8,7 @@ import {
   SimpleQueue,
   IpPool,
 } from './types.js';
+import { storage } from '../storage.js';
 
 export class DemoDriver implements IRouterDriver {
   private config: RouterConfig;
@@ -27,13 +28,36 @@ export class DemoDriver implements IRouterDriver {
     this.config = config;
     this.startUptimeSeconds = Math.floor(Date.now() / 1000) - 2450000; // ~4 weeks ago
 
-    if (seedData && seedData.secrets) {
+    const saved = storage.getDemoData(this.config.id);
+    if (saved && saved.secrets) {
+      this.secrets = [...saved.secrets];
+      this.profiles = saved.profiles ? [...saved.profiles] : [];
+      this.queues = saved.queues ? [...saved.queues] : [];
+      this.pools = saved.pools ? [...saved.pools] : [];
+      this.activeSessions = saved.active ? [...saved.active] : [];
+    } else if (seedData && seedData.secrets) {
       this.secrets = [...seedData.secrets];
       this.profiles = seedData.profiles ? [...seedData.profiles] : [];
       this.queues = seedData.queues ? [...seedData.queues] : [];
       this.pools = seedData.pools ? [...seedData.pools] : [];
+      this.persist();
     } else {
       this.initDefaultMockData();
+      this.persist();
+    }
+  }
+
+  private persist() {
+    try {
+      storage.saveDemoData(this.config.id, {
+        secrets: this.secrets,
+        profiles: this.profiles,
+        queues: this.queues,
+        pools: this.pools,
+        active: this.activeSessions,
+      });
+    } catch (e) {
+      console.warn('Failed to persist demo driver data:', e);
     }
   }
 
@@ -292,6 +316,7 @@ export class DemoDriver implements IRouterDriver {
       routerName: this.config.name,
     };
     this.secrets.push(newSecret);
+    this.persist();
     return newSecret;
   }
 
@@ -307,6 +332,7 @@ export class DemoDriver implements IRouterDriver {
       routerId: this.config.id,
       routerName: this.config.name,
     };
+    this.persist();
     return this.secrets[idx];
   }
 
@@ -315,7 +341,9 @@ export class DemoDriver implements IRouterDriver {
     this.secrets = this.secrets.filter((s) => s.name !== name);
     // Also disconnect active if deleted
     this.activeSessions = this.activeSessions.filter((a) => a.name !== name);
-    return this.secrets.length < initialLen;
+    const removed = this.secrets.length < initialLen;
+    if (removed) this.persist();
+    return removed;
   }
 
   async setSecretDisabled(name: string, disabled: boolean): Promise<boolean> {
@@ -327,6 +355,7 @@ export class DemoDriver implements IRouterDriver {
       this.activeSessions = this.activeSessions.filter((a) => a.name !== name);
       secret.lastLoggedOut = new Date().toISOString().replace('T', ' ').substring(0, 19);
     }
+    this.persist();
     return true;
   }
 
@@ -348,7 +377,9 @@ export class DemoDriver implements IRouterDriver {
   async disconnectActive(name: string): Promise<boolean> {
     const initialLen = this.activeSessions.length;
     this.activeSessions = this.activeSessions.filter((a) => a.name !== name);
-    return this.activeSessions.length < initialLen;
+    const removed = this.activeSessions.length < initialLen;
+    if (removed) this.persist();
+    return removed;
   }
 
   async getProfiles(): Promise<PppProfile[]> {
@@ -374,6 +405,7 @@ export class DemoDriver implements IRouterDriver {
       secretCount: 0,
     };
     this.profiles.push(newProfile);
+    this.persist();
     return newProfile;
   }
 
@@ -387,6 +419,7 @@ export class DemoDriver implements IRouterDriver {
       routerId: this.config.id,
       routerName: this.config.name,
     };
+    this.persist();
     return this.profiles[idx];
   }
 
@@ -397,7 +430,9 @@ export class DemoDriver implements IRouterDriver {
     }
     const initialLen = this.profiles.length;
     this.profiles = this.profiles.filter((p) => p.name !== name);
-    return this.profiles.length < initialLen;
+    const removed = this.profiles.length < initialLen;
+    if (removed) this.persist();
+    return removed;
   }
 
   async getQueues(): Promise<SimpleQueue[]> {
@@ -423,6 +458,7 @@ export class DemoDriver implements IRouterDriver {
       childCount: 0,
     };
     this.queues.push(newQueue);
+    this.persist();
     return newQueue;
   }
 
@@ -436,6 +472,7 @@ export class DemoDriver implements IRouterDriver {
       routerId: this.config.id,
       routerName: this.config.name,
     };
+    this.persist();
     return this.queues[idx];
   }
 
@@ -451,7 +488,9 @@ export class DemoDriver implements IRouterDriver {
     }
     const initialLen = this.queues.length;
     this.queues = this.queues.filter((q) => q.name !== name);
-    return this.queues.length < initialLen;
+    const removed = this.queues.length < initialLen;
+    if (removed) this.persist();
+    return removed;
   }
 
   async getPools(): Promise<IpPool[]> {
@@ -482,6 +521,7 @@ export class DemoDriver implements IRouterDriver {
       usedCount: 0,
     };
     this.pools.push(newPool);
+    this.persist();
     return newPool;
   }
 
@@ -495,6 +535,7 @@ export class DemoDriver implements IRouterDriver {
       routerId: this.config.id,
       routerName: this.config.name,
     };
+    this.persist();
     return this.pools[idx];
   }
 
@@ -505,6 +546,8 @@ export class DemoDriver implements IRouterDriver {
     }
     const initialLen = this.pools.length;
     this.pools = this.pools.filter((p) => p.name !== name);
-    return this.pools.length < initialLen;
+    const removed = this.pools.length < initialLen;
+    if (removed) this.persist();
+    return removed;
   }
 }

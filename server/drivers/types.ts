@@ -83,6 +83,7 @@ export interface PppProfile {
   dnsServer?: string;
   comment?: string;
   secretCount?: number;
+  activeCount?: number;
   routerId?: string;
   routerName?: string;
 }

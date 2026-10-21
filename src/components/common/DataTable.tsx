@@ -10,6 +10,7 @@ import {
   SortingState,
   ColumnFiltersState,
   VisibilityState,
+  ColumnOrderState,
   RowSelectionState,
 } from '@tanstack/react-table';
 import {
@@ -28,6 +29,10 @@ import {
   ChevronsRight,
   Eye,
   Check,
+  GripVertical,
+  ArrowLeft,
+  ArrowRight,
+  RotateCcw,
 } from 'lucide-react';
 import { ContextMenu, ContextMenuItem } from './ContextMenu.tsx';
 
@@ -122,6 +127,23 @@ export function DataTable<TData extends object>({
     return saved ? JSON.parse(saved) : {};
   });
 
+  // Persistence for column order (draggable / movable columns)
+  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(() => {
+    const saved = localStorage.getItem(`pppoe_tbl_order_${tableId}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+    return [];
+  });
+
+  // Drag and drop column state
+  const [draggedColId, setDraggedColId] = useState<string | null>(null);
+  const [dragOverColId, setDragOverColId] = useState<string | null>(null);
+  const [dropSide, setDropSide] = useState<'left' | 'right' | null>(null);
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [debouncedGlobalFilter, setDebouncedGlobalFilter] = useState('');
@@ -153,6 +175,63 @@ export function DataTable<TData extends object>({
     localStorage.setItem(`pppoe_tbl_col_${tableId}`, JSON.stringify(columnVisibility));
   }, [columnVisibility, tableId]);
 
+  // Persist column order
+  useEffect(() => {
+    if (columnOrder.length > 0) {
+      localStorage.setItem(`pppoe_tbl_order_${tableId}`, JSON.stringify(columnOrder));
+    }
+  }, [columnOrder, tableId]);
+
+  // Move column left or right programmatically
+  const moveColumn = (colId: string, direction: 'left' | 'right') => {
+    const leafCols = table.getAllLeafColumns().map((c) => c.id);
+    const current = columnOrder.length > 0 ? [...columnOrder] : leafCols;
+    const idx = current.indexOf(colId);
+    if (idx === -1) return;
+    const targetIdx = direction === 'left' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= current.length) return;
+    const nextOrder = [...current];
+    const [moved] = nextOrder.splice(idx, 1);
+    nextOrder.splice(targetIdx, 0, moved);
+    setColumnOrder(nextOrder);
+  };
+
+  // Reset column order to original default
+  const resetColumnOrder = () => {
+    localStorage.removeItem(`pppoe_tbl_order_${tableId}`);
+    setColumnOrder([]);
+  };
+
+  // Drop column handler for header drag-and-drop
+  const handleColumnDrop = (targetColId: string) => {
+    if (!draggedColId || draggedColId === targetColId) {
+      setDraggedColId(null);
+      setDragOverColId(null);
+      setDropSide(null);
+      return;
+    }
+    const leafCols = table.getAllLeafColumns().map((c) => c.id);
+    const current = columnOrder.length > 0 ? [...columnOrder] : leafCols;
+    const fromIdx = current.indexOf(draggedColId);
+    if (fromIdx === -1) return;
+
+    const nextOrder = [...current];
+    nextOrder.splice(fromIdx, 1);
+
+    let toIdx = nextOrder.indexOf(targetColId);
+    if (toIdx === -1) {
+      toIdx = nextOrder.length;
+    } else if (dropSide === 'right') {
+      toIdx += 1;
+    }
+
+    nextOrder.splice(toIdx, 0, draggedColId);
+    setColumnOrder(nextOrder);
+    setDraggedColId(null);
+    setDragOverColId(null);
+    setDropSide(null);
+  };
+
   // Handle Ctrl+A for selecting all visible rows
   const tableContainerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -180,6 +259,7 @@ export function DataTable<TData extends object>({
       globalFilter: debouncedGlobalFilter,
       columnFilters,
       columnVisibility,
+      columnOrder,
       rowSelection,
     },
     enableRowSelection: true,
@@ -188,6 +268,7 @@ export function DataTable<TData extends object>({
     onGlobalFilterChange: setDebouncedGlobalFilter,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
+    onColumnOrderChange: setColumnOrder,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -310,27 +391,60 @@ export function DataTable<TData extends object>({
             {isColumnPickerOpen && (
               <>
                 <div className="fixed inset-0 z-30" onClick={() => setIsColumnPickerOpen(false)} />
-                <div className="absolute left-0 mt-1.5 z-40 w-52 p-2 bg-white dark:bg-zinc-900 rounded-lg shadow-xl border border-slate-200 dark:border-zinc-800 text-xs">
-                  <div className="font-semibold text-slate-700 dark:text-zinc-300 pb-1.5 mb-1.5 border-b border-slate-100 dark:border-zinc-800">
-                    Tampilkan Kolom
+                <div className="absolute left-0 mt-1.5 z-40 w-64 p-2.5 bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-slate-200 dark:border-zinc-800 text-xs animate-in fade-in zoom-in-95">
+                  <div className="flex items-center justify-between font-semibold text-slate-800 dark:text-zinc-200 pb-1.5 mb-1.5 border-b border-slate-100 dark:border-zinc-800">
+                    <span>Atur & Urutan Kolom</span>
+                    <button
+                      type="button"
+                      onClick={resetColumnOrder}
+                      className="flex items-center gap-1 text-[10px] text-sky-600 dark:text-sky-400 hover:underline font-normal"
+                      title="Kembalikan urutan default"
+                    >
+                      <RotateCcw className="w-2.5 h-2.5" />
+                      <span>Reset</span>
+                    </button>
                   </div>
-                  <div className="max-h-56 overflow-y-auto space-y-1">
-                    {table.getAllLeafColumns().map((column) => {
+                  <p className="text-[10px] text-slate-400 dark:text-zinc-500 mb-2 leading-tight">
+                    Centang untuk tampilkan. Tarik header tabel atau gunakan tombol panah untuk memindahkan posisi.
+                  </p>
+                  <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
+                    {table.getVisibleLeafColumns().map((column, idx) => {
                       if (column.id === 'select' || column.id === 'actions') return null;
                       const headerName = typeof column.columnDef.header === 'string' ? column.columnDef.header : column.id;
                       return (
-                        <label
+                        <div
                           key={column.id}
-                          className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer text-slate-700 dark:text-zinc-300"
+                          className="flex items-center justify-between px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-800/80 text-slate-700 dark:text-zinc-300"
                         >
-                          <input
-                            type="checkbox"
-                            checked={column.getIsVisible()}
-                            onChange={column.getToggleVisibilityHandler()}
-                            className="rounded-xs text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"
-                          />
-                          <span className="truncate">{headerName}</span>
-                        </label>
+                          <label className="flex items-center gap-2 cursor-pointer truncate flex-1 min-w-0 mr-2">
+                            <input
+                              type="checkbox"
+                              checked={column.getIsVisible()}
+                              onChange={column.getToggleVisibilityHandler()}
+                              className="rounded-xs text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"
+                            />
+                            <span className="truncate">{headerName}</span>
+                          </label>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => moveColumn(column.id, 'left')}
+                              className="p-1 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 rounded-md hover:bg-slate-200 dark:hover:bg-zinc-700"
+                              title="Geser Kolom ke Kiri"
+                            >
+                              <ArrowLeft className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveColumn(column.id, 'right')}
+                              className="p-1 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 rounded-md hover:bg-slate-200 dark:hover:bg-zinc-700"
+                              title="Geser Kolom ke Kanan"
+                            >
+                              <ArrowRight className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
@@ -402,32 +516,87 @@ export function DataTable<TData extends object>({
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
                     const isSorted = header.column.getIsSorted();
+                    const isDraggable = header.column.id !== 'select' && header.column.id !== 'actions';
+                    const isDropTarget = dragOverColId === header.column.id && draggedColId !== header.column.id;
+
                     return (
                       <th
                         key={header.id}
                         colSpan={header.colSpan}
                         style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
-                        className="py-2.5 px-3 font-semibold whitespace-nowrap text-xs border-r border-slate-200 dark:border-zinc-700 last:border-r-0"
+                        draggable={isDraggable}
+                        onDragStart={(e) => {
+                          if (!isDraggable) return;
+                          e.dataTransfer.setData('text/plain', header.column.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                          setDraggedColId(header.column.id);
+                        }}
+                        onDragOver={(e) => {
+                          if (!isDraggable || !draggedColId || draggedColId === header.column.id) return;
+                          e.preventDefault();
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const midpoint = rect.left + rect.width / 2;
+                          const side = e.clientX < midpoint ? 'left' : 'right';
+                          setDragOverColId(header.column.id);
+                          setDropSide(side);
+                        }}
+                        onDragLeave={() => {
+                          if (dragOverColId === header.column.id) {
+                            setDragOverColId(null);
+                            setDropSide(null);
+                          }
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          handleColumnDrop(header.column.id);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedColId(null);
+                          setDragOverColId(null);
+                          setDropSide(null);
+                        }}
+                        className={`py-2 px-2.5 font-semibold whitespace-nowrap text-xs border-r border-slate-200 dark:border-zinc-700 last:border-r-0 transition-all select-none relative ${
+                          isDraggable ? 'cursor-grab active:cursor-grabbing' : ''
+                        } ${
+                          isDropTarget
+                            ? dropSide === 'left'
+                              ? 'border-l-3 border-l-sky-500 bg-sky-100/60 dark:bg-sky-950/70 text-sky-900 dark:text-sky-200'
+                              : 'border-r-3 border-r-sky-500 bg-sky-100/60 dark:bg-sky-950/70 text-sky-900 dark:text-sky-200'
+                            : draggedColId === header.column.id
+                            ? 'opacity-40 bg-slate-200 dark:bg-zinc-700'
+                            : ''
+                        }`}
+                        title={isDraggable ? 'Tahan & geser untuk mengubah urutan kolom' : undefined}
                       >
                         {header.isPlaceholder ? null : (
-                          <div
-                            onClick={header.column.getToggleSortingHandler()}
-                            className={`flex items-center gap-1.5 ${
-                              header.column.getCanSort() ? 'cursor-pointer hover:text-sky-600 dark:hover:text-sky-400' : ''
-                            }`}
-                          >
-                            <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
-                            {header.column.getCanSort() && (
-                              <span className="shrink-0 text-slate-400 dark:text-zinc-500">
-                                {isSorted === 'asc' ? (
-                                  <ArrowUp className="w-3.5 h-3.5 text-sky-500 font-bold" />
-                                ) : isSorted === 'desc' ? (
-                                  <ArrowDown className="w-3.5 h-3.5 text-sky-500 font-bold" />
-                                ) : (
-                                  <ArrowUpDown className="w-3 h-3 opacity-40 hover:opacity-100" />
-                                )}
+                          <div className="flex items-center gap-1.5">
+                            {isDraggable && (
+                              <span
+                                className="text-slate-400 dark:text-zinc-500 hover:text-sky-500 cursor-grab shrink-0"
+                                title="Geser posisi kolom"
+                              >
+                                <GripVertical className="w-3 h-3" />
                               </span>
                             )}
+                            <div
+                              onClick={header.column.getToggleSortingHandler()}
+                              className={`flex items-center gap-1.5 flex-1 min-w-0 ${
+                                header.column.getCanSort() ? 'cursor-pointer hover:text-sky-600 dark:hover:text-sky-400' : ''
+                              }`}
+                            >
+                              <span className="truncate">{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                              {header.column.getCanSort() && (
+                                <span className="shrink-0 text-slate-400 dark:text-zinc-500">
+                                  {isSorted === 'asc' ? (
+                                    <ArrowUp className="w-3.5 h-3.5 text-sky-500 font-bold" />
+                                  ) : isSorted === 'desc' ? (
+                                    <ArrowDown className="w-3.5 h-3.5 text-sky-500 font-bold" />
+                                  ) : (
+                                    <ArrowUpDown className="w-3 h-3 opacity-40 hover:opacity-100" />
+                                  )}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         )}
                       </th>

@@ -6,6 +6,7 @@ import { PppActive } from '../types/index.ts';
 import { DataTable, ipAddressComparator, uptimeComparator } from '../components/common/DataTable.tsx';
 import { ConfirmDialog } from '../components/common/ConfirmDialog.tsx';
 import { useToast } from '../components/common/Toast.tsx';
+import { ActiveSessionDetailModal } from '../components/active/ActiveSessionDetailModal.tsx';
 import {
   Activity,
   UserX,
@@ -16,6 +17,7 @@ import {
   Layers,
   Copy,
   AlertTriangle,
+  LineChart,
 } from 'lucide-react';
 
 export const ActiveView: React.FC = () => {
@@ -24,6 +26,9 @@ export const ActiveView: React.FC = () => {
 
   const [activeSessions, setActiveSessions] = useState<PppActive[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Detail / Realtime Monitor modal
+  const [selectedDetailSession, setSelectedDetailSession] = useState<PppActive | null>(null);
 
   // Disconnect modals
   const [sessionToKick, setSessionToKick] = useState<PppActive | null>(null);
@@ -226,6 +231,11 @@ export const ActiveView: React.FC = () => {
 
   const getContextMenuItems = (s: PppActive) => [
     {
+      label: 'Monitor Realtime & Riwayat',
+      icon: <LineChart className="w-3.5 h-3.5 text-sky-500" />,
+      action: () => setSelectedDetailSession(s),
+    },
+    {
       label: 'Putuskan Sesi (Kick)',
       icon: <UserX className="w-3.5 h-3.5 text-rose-500" />,
       destructive: true,
@@ -258,8 +268,11 @@ export const ActiveView: React.FC = () => {
             <Activity className="w-5 h-5 text-emerald-500" />
             <span>PPP Active Connections</span>
           </h2>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 flex items-center gap-2">
-            <span>Monitoring sesi pelanggan yang sedang online realtime</span>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 flex flex-wrap items-center gap-2">
+            <span>Monitoring sesi pelanggan yang sedang online realtime.</span>
+            <span className="font-semibold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 px-2 py-0.5 rounded-md border border-sky-200 dark:border-sky-800 text-[11px]">
+              Klik 2x pada baris untuk grafik trafik realtime & riwayat
+            </span>
             {refreshInterval > 0 && (
               <span className="inline-flex items-center gap-1 font-mono text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
@@ -289,6 +302,16 @@ export const ActiveView: React.FC = () => {
         searchPlaceholder="Cari username aktif, IP, caller ID..."
         getRowId={(s) => s.name}
         getContextMenuItems={getContextMenuItems}
+        onRowDoubleClick={(s) => setSelectedDetailSession(s)}
+      />
+
+      {/* Realtime Traffic & Session Detail Modal */}
+      <ActiveSessionDetailModal
+        session={selectedDetailSession}
+        isOpen={Boolean(selectedDetailSession)}
+        onClose={() => setSelectedDetailSession(null)}
+        onKick={(s) => setSessionToKick(s)}
+        routerId={selectedRouterId}
       />
 
       {/* Disconnect Single Confirm Dialog */}

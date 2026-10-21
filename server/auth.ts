@@ -10,10 +10,18 @@ export interface AuthPayload {
   username: string;
   name: string;
   role: string;
+  allowedMenus: string[];
 }
 
 export interface AuthenticatedRequest extends Request {
   user?: AuthPayload;
+}
+
+export function requireSuperadmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.user || req.user.role !== 'superadmin') {
+    return res.status(403).json({ success: false, error: 'Akses khusus untuk Superadmin.' });
+  }
+  next();
 }
 
 export function hashPassword(plainText: string): string {

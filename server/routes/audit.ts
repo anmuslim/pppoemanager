@@ -2,6 +2,8 @@ import { Router, Response } from 'express';
 import { storage } from '../storage.js';
 import { AuthenticatedRequest } from '../auth.js';
 
+import { routerManager } from '../drivers/manager.js';
+
 const router = Router();
 
 // GET audit logs
@@ -12,7 +14,9 @@ router.get('/', (_req, res: Response) => {
 
 // POST reset demo data
 router.post('/reset-demo', (req: AuthenticatedRequest, res: Response) => {
+  storage.clearDemoData();
   storage.seedDemoData();
+  routerManager.clearAllDrivers();
   storage.addAuditLog({
     username: req.user?.username || 'admin',
     routerId: 'system',

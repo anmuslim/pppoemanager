@@ -22,32 +22,71 @@ router.get('/', async (req, res: Response) => {
   }
 });
 
+// GET session history and events
+router.get('/:name/history', (req, res: Response) => {
+  const sessionName = req.params.name;
+  const history = storage.getUserSessionEvents(sessionName);
+  res.json({ success: true, data: history });
+});
+
 // DELETE disconnect active session
 router.delete('/:name', async (req: AuthenticatedRequest, res: Response) => {
   const routerId = (req.params as any).routerId;
   const sessionName = req.params.name;
-  const targetRouterId = (req.query.routerId as string) || routerId;
+  const explicitRouter = req.query.routerId as string;
 
   try {
-    const targets = await routerManager.getTargetDrivers(targetRouterId);
-    if (targets.length === 0) {
+    let targetConfig: any = null;
+    let targetDriver: any = null;
+
+    if (explicitRouter && explicitRouter !== 'all') {
+      const targets = await routerManager.getTargetDrivers(explicitRouter);
+      if (targets.length > 0) {
+        targetConfig = targets[0].config;
+        targetDriver = targets[0].driver;
+      }
+    } else if (routerId !== 'all') {
+      const targets = await routerManager.getTargetDrivers(routerId);
+      if (targets.length > 0) {
+        targetConfig = targets[0].config;
+        targetDriver = targets[0].driver;
+      }
+    } else {
+      // Find which router currently has this active session
+      const all = await routerManager.getTargetDrivers('all');
+      for (const t of all) {
+        try {
+          const list = await t.driver.getActive();
+          if (list.some((a) => a.name === sessionName)) {
+            targetConfig = t.config;
+            targetDriver = t.driver;
+            break;
+          }
+        } catch {}
+      }
+      if (!targetDriver && all.length > 0) {
+        targetConfig = all[0].config;
+        targetDriver = all[0].driver;
+      }
+    }
+
+    if (!targetDriver || !targetConfig) {
       return res.status(404).json({ success: false, error: 'Router tidak ditemukan.' });
     }
-    const { config, driver } = targets[0];
 
-    await driver.disconnectActive(sessionName);
+    await targetDriver.disconnectActive(sessionName);
 
     storage.addRecentEvent({
       type: 'disconnected',
       username: sessionName,
-      routerName: config.name,
+      routerName: targetConfig.name,
       ipAddress: 'PPPoE Client',
     });
 
     storage.addAuditLog({
       username: req.user?.username || 'admin',
-      routerId: config.id,
-      routerName: config.name,
+      routerId: targetConfig.id,
+      routerName: targetConfig.name,
       action: 'DISCONNECT',
       targetType: 'ACTIVE',
       targetName: sessionName,

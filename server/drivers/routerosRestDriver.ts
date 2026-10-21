@@ -70,6 +70,34 @@ export class RouterosRestDriver implements IRouterDriver {
     }
   }
 
+  private async findItemId(menu: string, name: string): Promise<string> {
+    try {
+      const list = await this.request<any[]>(`/${menu}`);
+      const match = Array.isArray(list) ? list.find((item: any) => item && (item.name === name || item['.id'] === name)) : null;
+      if (match && match['.id']) {
+        return match['.id'];
+      }
+    } catch {}
+    return name;
+  }
+
+  private async createResource(menu: string, body: Record<string, any>): Promise<any> {
+    try {
+      return await this.request(`/${menu}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      });
+    } catch (err: any) {
+      if (err.message && err.message.includes('405')) {
+        return await this.request(`/${menu}`, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+      }
+      throw err;
+    }
+  }
+
   async testConnection(): Promise<RouterConnectionTestResult> {
     try {
       const [res, identityRes] = await Promise.all([
@@ -150,16 +178,14 @@ export class RouterosRestDriver implements IRouterDriver {
     if (secret.callerId) body['caller-id'] = secret.callerId;
     if (secret.comment) body.comment = secret.comment;
 
-    await this.request('/ppp/secret', {
-      method: 'PUT',
-      body: JSON.stringify(body),
-    });
-
+    await this.createResource('ppp/secret', body);
     return { ...secret, routerId: this.config.id, routerName: this.config.name };
   }
 
   async updateSecret(name: string, secret: Partial<PppSecret>): Promise<PppSecret> {
+    const id = await this.findItemId('ppp/secret', name);
     const body: Record<string, any> = {};
+    if (secret.name !== undefined && secret.name !== name) body.name = secret.name;
     if (secret.password !== undefined) body.password = secret.password;
     if (secret.service !== undefined) body.service = secret.service;
     if (secret.profile !== undefined) body.profile = secret.profile;
@@ -169,23 +195,25 @@ export class RouterosRestDriver implements IRouterDriver {
     if (secret.comment !== undefined) body.comment = secret.comment;
     if (secret.disabled !== undefined) body.disabled = secret.disabled ? 'yes' : 'no';
 
-    await this.request(`/ppp/secret/${encodeURIComponent(name)}`, {
+    await this.request(`/ppp/secret/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify(body),
     });
 
-    return { name, ...secret, routerId: this.config.id, routerName: this.config.name } as PppSecret;
+    return { name: secret.name || name, ...secret, routerId: this.config.id, routerName: this.config.name } as PppSecret;
   }
 
   async deleteSecret(name: string): Promise<boolean> {
-    await this.request(`/ppp/secret/${encodeURIComponent(name)}`, {
+    const id = await this.findItemId('ppp/secret', name);
+    await this.request(`/ppp/secret/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     });
     return true;
   }
 
   async setSecretDisabled(name: string, disabled: boolean): Promise<boolean> {
-    await this.request(`/ppp/secret/${encodeURIComponent(name)}`, {
+    const id = await this.findItemId('ppp/secret', name);
+    await this.request(`/ppp/secret/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify({ disabled: disabled ? 'yes' : 'no' }),
     });
@@ -207,7 +235,8 @@ export class RouterosRestDriver implements IRouterDriver {
   }
 
   async disconnectActive(name: string): Promise<boolean> {
-    await this.request(`/ppp/active/${encodeURIComponent(name)}`, {
+    const id = await this.findItemId('ppp/active', name);
+    await this.request(`/ppp/active/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     });
     return true;
@@ -241,16 +270,14 @@ export class RouterosRestDriver implements IRouterDriver {
     if (profile.dnsServer) body['dns-server'] = profile.dnsServer;
     if (profile.comment) body.comment = profile.comment;
 
-    await this.request('/ppp/profile', {
-      method: 'PUT',
-      body: JSON.stringify(body),
-    });
-
+    await this.createResource('ppp/profile', body);
     return { ...profile, routerId: this.config.id, routerName: this.config.name };
   }
 
   async updateProfile(name: string, profile: Partial<PppProfile>): Promise<PppProfile> {
+    const id = await this.findItemId('ppp/profile', name);
     const body: Record<string, any> = {};
+    if (profile.name !== undefined && profile.name !== name) body.name = profile.name;
     if (profile.localAddress !== undefined) body['local-address'] = profile.localAddress;
     if (profile.remoteAddress !== undefined) body['remote-address'] = profile.remoteAddress;
     if (profile.rateLimit !== undefined) body['rate-limit'] = profile.rateLimit;
@@ -259,16 +286,17 @@ export class RouterosRestDriver implements IRouterDriver {
     if (profile.dnsServer !== undefined) body['dns-server'] = profile.dnsServer;
     if (profile.comment !== undefined) body.comment = profile.comment;
 
-    await this.request(`/ppp/profile/${encodeURIComponent(name)}`, {
+    await this.request(`/ppp/profile/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify(body),
     });
 
-    return { name, ...profile, routerId: this.config.id, routerName: this.config.name } as PppProfile;
+    return { name: profile.name || name, ...profile, routerId: this.config.id, routerName: this.config.name } as PppProfile;
   }
 
   async deleteProfile(name: string): Promise<boolean> {
-    await this.request(`/ppp/profile/${encodeURIComponent(name)}`, {
+    const id = await this.findItemId('ppp/profile', name);
+    await this.request(`/ppp/profile/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     });
     return true;
@@ -300,16 +328,14 @@ export class RouterosRestDriver implements IRouterDriver {
     if (queue.parent) body.parent = queue.parent;
     if (queue.comment) body.comment = queue.comment;
 
-    await this.request('/queue/simple', {
-      method: 'PUT',
-      body: JSON.stringify(body),
-    });
-
+    await this.createResource('queue/simple', body);
     return { ...queue, routerId: this.config.id, routerName: this.config.name };
   }
 
   async updateQueue(name: string, queue: Partial<SimpleQueue>): Promise<SimpleQueue> {
+    const id = await this.findItemId('queue/simple', name);
     const body: Record<string, any> = {};
+    if (queue.name !== undefined && queue.name !== name) body.name = queue.name;
     if (queue.target !== undefined) body.target = queue.target;
     if (queue.maxLimit !== undefined) body['max-limit'] = queue.maxLimit;
     if (queue.limitAt !== undefined) body['limit-at'] = queue.limitAt;
@@ -317,16 +343,17 @@ export class RouterosRestDriver implements IRouterDriver {
     if (queue.parent !== undefined) body.parent = queue.parent || 'none';
     if (queue.comment !== undefined) body.comment = queue.comment;
 
-    await this.request(`/queue/simple/${encodeURIComponent(name)}`, {
+    await this.request(`/queue/simple/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify(body),
     });
 
-    return { name, ...queue, routerId: this.config.id, routerName: this.config.name } as SimpleQueue;
+    return { name: queue.name || name, ...queue, routerId: this.config.id, routerName: this.config.name } as SimpleQueue;
   }
 
   async deleteQueue(name: string): Promise<boolean> {
-    await this.request(`/queue/simple/${encodeURIComponent(name)}`, {
+    const id = await this.findItemId('queue/simple', name);
+    await this.request(`/queue/simple/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     });
     return true;
@@ -352,30 +379,29 @@ export class RouterosRestDriver implements IRouterDriver {
     if (pool.nextPool) body['next-pool'] = pool.nextPool;
     if (pool.comment) body.comment = pool.comment;
 
-    await this.request('/ip/pool', {
-      method: 'PUT',
-      body: JSON.stringify(body),
-    });
-
+    await this.createResource('ip/pool', body);
     return { ...pool, routerId: this.config.id, routerName: this.config.name };
   }
 
   async updatePool(name: string, pool: Partial<IpPool>): Promise<IpPool> {
+    const id = await this.findItemId('ip/pool', name);
     const body: Record<string, any> = {};
+    if (pool.name !== undefined && pool.name !== name) body.name = pool.name;
     if (pool.ranges !== undefined) body.ranges = pool.ranges;
     if (pool.nextPool !== undefined) body['next-pool'] = pool.nextPool || 'none';
     if (pool.comment !== undefined) body.comment = pool.comment;
 
-    await this.request(`/ip/pool/${encodeURIComponent(name)}`, {
+    await this.request(`/ip/pool/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify(body),
     });
 
-    return { name, ...pool, routerId: this.config.id, routerName: this.config.name } as IpPool;
+    return { name: pool.name || name, ...pool, routerId: this.config.id, routerName: this.config.name } as IpPool;
   }
 
   async deletePool(name: string): Promise<boolean> {
-    await this.request(`/ip/pool/${encodeURIComponent(name)}`, {
+    const id = await this.findItemId('ip/pool', name);
+    await this.request(`/ip/pool/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     });
     return true;

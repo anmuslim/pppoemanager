@@ -61,6 +61,7 @@ export interface PppProfile {
   dnsServer?: string;
   comment?: string;
   secretCount?: number;
+  activeCount?: number;
   routerId?: string;
   routerName?: string;
 }
@@ -153,5 +154,19 @@ export interface User {
   id: string;
   username: string;
   name: string;
-  role: string;
+  role: 'superadmin' | 'operator' | 'technician';
+  allowedMenus?: string[];
+  status?: 'active' | 'suspended';
+  lastLogin?: string;
+  createdAt?: string;
+}
+
+export interface SessionHistoryItem {
+  id: string;
+  timestamp: string;
+  type: 'connected' | 'disconnected';
+  username: string;
+  routerName: string;
+  ipAddress: string;
+  details?: string;
 }

@@ -149,6 +149,10 @@ export const api = {
           body: JSON.stringify({ items }),
         }
       ),
+    getHistory: (routerId: string, name: string) =>
+      request<{ success: boolean; data: Array<{ id: string; timestamp: string; type: 'connected' | 'disconnected'; username: string; routerName: string; ipAddress: string; details?: string }> }>(
+        `/api/routers/${encodeURIComponent(routerId)}/ppp/active/${encodeURIComponent(name)}/history`
+      ),
   },
 
   profiles: {
@@ -239,5 +243,23 @@ export const api = {
   audit: {
     getAll: () => request<{ success: boolean; data: AuditLogItem[] }>('/api/audit-logs'),
     resetDemo: () => request<{ success: boolean; message: string }>('/api/demo/reset-demo', { method: 'POST' }),
+  },
+
+  users: {
+    getAll: () => request<{ success: boolean; data: User[] }>('/api/users'),
+    create: (data: Partial<User> & { password?: string }) =>
+      request<{ success: boolean; data: User }>('/api/users', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: Partial<User> & { password?: string }) =>
+      request<{ success: boolean; data: User }>(`/api/users/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      request<{ success: boolean; message: string }>(`/api/users/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      }),
   },
 };

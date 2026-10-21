@@ -20,11 +20,19 @@ router.post('/login', (req, res: Response) => {
     return res.status(401).json({ success: false, error: 'Username atau password salah.' });
   }
 
+  if (user.status === 'suspended') {
+    return res.status(403).json({ success: false, error: 'Akun Anda telah dinonaktifkan (suspended). Hubungi Superadmin.' });
+  }
+
+  // Update last login
+  storage.updateUser(user.id, { lastLogin: new Date().toISOString() });
+
   const token = generateToken({
     userId: user.id,
     username: user.username,
     name: user.name,
     role: user.role,
+    allowedMenus: user.allowedMenus || [],
   });
 
   storage.addAuditLog({
@@ -34,7 +42,7 @@ router.post('/login', (req, res: Response) => {
     action: 'TEST',
     targetType: 'ROUTER',
     targetName: user.username,
-    details: 'Pengguna berhasil masuk ke sistem PPPoE Manager',
+    details: `Pengguna '${user.username}' (${user.name}) berhasil masuk ke sistem`,
   });
 
   res.json({
@@ -45,6 +53,8 @@ router.post('/login', (req, res: Response) => {
       username: user.username,
       name: user.name,
       role: user.role,
+      allowedMenus: user.allowedMenus || [],
+      status: user.status || 'active',
     },
   });
 });
@@ -58,6 +68,10 @@ router.get('/me', (req: AuthenticatedRequest, res: Response) => {
     return res.status(404).json({ success: false, error: 'User tidak ditemukan' });
   }
 
+  if (user.status === 'suspended') {
+    return res.status(403).json({ success: false, error: 'Akun dinonaktifkan.' });
+  }
+
   res.json({
     success: true,
     user: {
@@ -65,6 +79,9 @@ router.get('/me', (req: AuthenticatedRequest, res: Response) => {
       username: user.username,
       name: user.name,
       role: user.role,
+      allowedMenus: user.allowedMenus || [],
+      status: user.status || 'active',
+      lastLogin: user.lastLogin,
     },
   });
 });
