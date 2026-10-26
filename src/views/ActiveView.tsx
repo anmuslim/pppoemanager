@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { useRouterContext } from '../context/RouterContext.tsx';
 import { api } from '../api/client.ts';
@@ -36,23 +36,31 @@ export const ActiveView: React.FC = () => {
 
   const [isBulkDisconnectOpen, setIsBulkDisconnectOpen] = useState(false);
   const [isBulkKicking, setIsBulkKicking] = useState(false);
+  const isInitialMount = useRef(true);
 
-  const fetchActive = async () => {
+  const fetchActive = async (silent: boolean = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await api.active.getAll(selectedRouterId);
       if (res.success && Array.isArray(res.data)) {
         setActiveSessions(res.data);
       }
     } catch (err: any) {
-      error('Gagal Mengambil Sesi Aktif', err.message);
+      if (!silent) {
+        error('Gagal Mengambil Sesi Aktif', err.message);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchActive();
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      fetchActive(false);
+    } else {
+      fetchActive(true); // background silent poll
+    }
   }, [selectedRouterId, refreshTick]);
 
   const handleDisconnect = async () => {
@@ -299,6 +307,7 @@ export const ActiveView: React.FC = () => {
         data={activeSessions}
         columns={columns}
         tableId="ppp_active"
+        loading={loading}
         searchPlaceholder="Cari username aktif, IP, caller ID..."
         getRowId={(s) => s.name}
         getContextMenuItems={getContextMenuItems}

@@ -282,6 +282,7 @@ export const QueuesView: React.FC = () => {
         data={queues}
         columns={columns}
         tableId="simple_queues"
+        loading={loading}
         searchPlaceholder="Cari nama queue, target subnet, parent..."
         getRowId={(q) => q.name}
         onRowDoubleClick={(q) => handleEditOpen(q)}

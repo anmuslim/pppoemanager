@@ -104,6 +104,8 @@ export interface DataTableProps<TData> {
   emptyMessage?: string;
   topToolbarActions?: React.ReactNode;
   renderMobileCard?: (row: TData, isSelected: boolean, onSelect: () => void) => React.ReactNode;
+  onSelectionChange?: (selectedRows: TData[]) => void;
+  loading?: boolean;
 }
 
 export function DataTable<TData extends object>({
@@ -120,6 +122,8 @@ export function DataTable<TData extends object>({
   emptyMessage = 'Tidak ada data ditemukan.',
   topToolbarActions,
   renderMobileCard,
+  onSelectionChange,
+  loading = false,
 }: DataTableProps<TData>) {
   // Persistence for column visibility
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
@@ -274,6 +278,7 @@ export function DataTable<TData extends object>({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    autoResetPageIndex: false,
     initialState: {
       pagination: {
         pageSize: 50,
@@ -285,6 +290,14 @@ export function DataTable<TData extends object>({
   useEffect(() => {
     table.setPageSize(pageSize);
   }, [pageSize, table]);
+
+  // Sync selected rows to parent callback
+  useEffect(() => {
+    if (onSelectionChange) {
+      const selected = table.getSelectedRowModel().rows.map((r) => r.original);
+      onSelectionChange(selected);
+    }
+  }, [rowSelection, data, onSelectionChange]);
 
   // Shift-click range selection helper
   const lastSelectedRowIndex = useRef<number | null>(null);
@@ -507,7 +520,13 @@ export function DataTable<TData extends object>({
       )}
 
       {/* Table Container (Winbox / RouterOS Styling) */}
-      <div className="flex-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col">
+      <div className="flex-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
+        {/* Loading Progress Indicator */}
+        {loading && (
+          <div className="h-1 w-full bg-sky-100/40 dark:bg-zinc-800 overflow-hidden absolute top-0 left-0 right-0 z-30">
+            <div className="h-full bg-gradient-to-r from-sky-500 via-indigo-500 to-sky-400 animate-progress-indeterminate" />
+          </div>
+        )}
         <div className="flex-1 overflow-x-auto overflow-y-auto min-h-[320px] max-h-[calc(100vh-270px)]">
           <table className="w-full text-left border-collapse text-xs">
             {/* Sticky Header */}

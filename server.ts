@@ -13,6 +13,7 @@ import overviewRoutes from './server/routes/overview.js';
 import auditRoutes from './server/routes/audit.js';
 import usersRoutes from './server/routes/users.js';
 import { requireAuth } from './server/auth.js';
+import { storage } from './server/storage.js';
 
 dotenv.config();
 
@@ -20,6 +21,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function startServer() {
+  // Inisialisasi storage (MySQL jika dikonfigurasi, atau JSON fallback)
+  await storage.init();
+
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
   const isProduction = process.env.NODE_ENV === 'production';

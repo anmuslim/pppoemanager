@@ -401,6 +401,7 @@ export const UsersView: React.FC = () => {
         data={users}
         columns={columns}
         tableId="app_users"
+        loading={loading}
         searchPlaceholder="Cari username, nama lengkap, role..."
         getRowId={(u) => u.id}
         onRowDoubleClick={(u) => handleEditOpen(u)}

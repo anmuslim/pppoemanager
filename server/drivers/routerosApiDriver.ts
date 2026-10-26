@@ -194,18 +194,89 @@ export class RouterosApiDriver implements IRouterDriver {
     return true;
   }
 
+  private static trafficCache: Map<string, { rxBytes: number; txBytes: number; timestamp: number }> = new Map();
+
   async getActive(): Promise<PppActive[]> {
-    const raw = await this.runCommand('ppp/active', 'print');
-    return raw.map((item) => ({
-      name: item.name,
-      service: item.service || 'pppoe',
-      callerId: item['caller-id'],
-      address: item.address,
-      uptime: item.uptime,
-      encoding: item.encoding,
-      routerId: this.config.id,
-      routerName: this.config.name,
-    }));
+    const [rawActive, rawQueues] = await Promise.all([
+      this.runCommand('ppp/active', 'print'),
+      this.runCommand('queue/simple', 'print').catch(() => []),
+    ]);
+
+    // Build lookup map from queues by name and target
+    const queueMap = new Map<string, any>();
+    for (const q of rawQueues) {
+      if (q && q.name) {
+        queueMap.set(q.name.toLowerCase(), q);
+        const stripped = q.name.replace(/^<pppoe-/, '').replace(/>$/, '').toLowerCase();
+        queueMap.set(stripped, q);
+      }
+      if (q && q.target) {
+        const targetIp = q.target.split('/')[0].trim();
+        if (targetIp) queueMap.set(targetIp, q);
+      }
+    }
+
+    const now = Date.now();
+
+    return rawActive.map((item) => {
+      const username = item.name;
+      const qKey = username.toLowerCase();
+      const qKeyWithBracket = `<pppoe-${username}>`.toLowerCase();
+      const q = queueMap.get(qKeyWithBracket) || queueMap.get(qKey) || (item.address ? queueMap.get(item.address) : null);
+
+      let rxBps = 0;
+      let txBps = 0;
+
+      if (q && q.rate) {
+        // RouterOS simple queue rate format: "upload/download" (Rx into router / Tx to client in bps)
+        const parts = String(q.rate).split('/');
+        if (parts.length >= 2) {
+          rxBps = Number(parts[0]) || 0;
+          txBps = Number(parts[1]) || 0;
+        }
+      }
+
+      // If rate is 0 or queue rate not available, try computing from byte deltas
+      if (q && q.bytes && (rxBps === 0 && txBps === 0)) {
+        const byteParts = String(q.bytes).split('/');
+        if (byteParts.length >= 2) {
+          const currRx = Number(byteParts[0]) || 0;
+          const currTx = Number(byteParts[1]) || 0;
+          const cacheKey = `${this.config.id}:::${username}`;
+          const prev = RouterosApiDriver.trafficCache.get(cacheKey);
+
+          if (prev && currRx >= prev.rxBytes && currTx >= prev.txBytes) {
+            const deltaSec = (now - prev.timestamp) / 1000;
+            if (deltaSec > 0.5 && deltaSec < 30) {
+              rxBps = Math.round(((currRx - prev.rxBytes) * 8) / deltaSec);
+              txBps = Math.round(((currTx - prev.txBytes) * 8) / deltaSec);
+            }
+          }
+          RouterosApiDriver.trafficCache.set(cacheKey, { rxBytes: currRx, txBytes: currTx, timestamp: now });
+        }
+      }
+
+      const formatRate = (bps: number): string => {
+        if (!bps || bps <= 0) return '0 bps';
+        if (bps >= 1_000_000_000) return `${(bps / 1_000_000_000).toFixed(1)} Gbps`;
+        if (bps >= 1_000_000) return `${(bps / 1_000_000).toFixed(1)} Mbps`;
+        if (bps >= 1_000) return `${(bps / 1_000).toFixed(1)} kbps`;
+        return `${Math.round(bps)} bps`;
+      };
+
+      return {
+        name: item.name,
+        service: item.service || 'pppoe',
+        callerId: item['caller-id'],
+        address: item.address,
+        uptime: item.uptime,
+        encoding: item.encoding,
+        rxRate: formatRate(rxBps),
+        txRate: formatRate(txBps),
+        routerId: this.config.id,
+        routerName: this.config.name,
+      };
+    });
   }
 
   async disconnectActive(name: string): Promise<boolean> {

@@ -51,8 +51,19 @@ export const ActiveSessionDetailModal: React.FC<ActiveSessionDetailModalProps> =
       return;
     }
 
-    const initRx = parseFloat(session.rxRate || '5.4') || 5.4;
-    const initTx = parseFloat(session.txRate || '14.2') || 14.2;
+    const parseRateToMbps = (val?: string): number => {
+      if (!val) return 0;
+      const num = parseFloat(val);
+      if (isNaN(num)) return 0;
+      const lower = val.toLowerCase();
+      if (lower.includes('gbps') || lower.includes('g')) return +(num * 1000).toFixed(1);
+      if (lower.includes('kbps') || lower.includes('k')) return +(num / 1000).toFixed(2);
+      if (lower.includes('bps')) return +(num / 1000000).toFixed(3);
+      return num;
+    };
+
+    const initRx = parseRateToMbps(session.rxRate) || 1.2;
+    const initTx = parseRateToMbps(session.txRate) || 4.5;
     setCurrentRx(initRx);
     setCurrentTx(initTx);
     setPeakRx(initRx);

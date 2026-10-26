@@ -188,6 +188,7 @@ export const AuditLogView: React.FC = () => {
         data={logs}
         columns={columns}
         tableId="audit_logs"
+        loading={loading}
         searchPlaceholder="Cari riwayat, nama target, operator, atau keterangan..."
         getRowId={(l) => l.id}
       />

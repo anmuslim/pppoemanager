@@ -276,6 +276,7 @@ export const PoolsView: React.FC = () => {
         data={pools}
         columns={columns}
         tableId="ip_pools"
+        loading={loading}
         searchPlaceholder="Cari nama pool, range IP, next pool..."
         getRowId={(p) => p.name}
         onRowDoubleClick={(p) => handleEditOpen(p)}

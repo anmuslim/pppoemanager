@@ -325,13 +325,20 @@ export class DemoDriver implements IRouterDriver {
     if (idx === -1) {
       throw new Error(`Secret '${name}' tidak ditemukan.`);
     }
+    const newName = patch.name && patch.name.trim() ? patch.name.trim() : name;
     this.secrets[idx] = {
       ...this.secrets[idx],
       ...patch,
-      name: patch.name || name,
+      name: newName,
       routerId: this.config.id,
       routerName: this.config.name,
     };
+
+    // If username changed, update any active session name
+    if (newName !== name) {
+      this.activeSessions = this.activeSessions.map((a) => (a.name === name ? { ...a, name: newName } : a));
+    }
+
     this.persist();
     return this.secrets[idx];
   }
@@ -360,10 +367,35 @@ export class DemoDriver implements IRouterDriver {
   }
 
   async getActive(): Promise<PppActive[]> {
-    // Return with live refreshed rates
+    // Generate realistic, consistent rates based on each secret's profile limit
+    const secretMap = new Map(this.secrets.map((s) => [s.name, s]));
+
     return this.activeSessions.map((session) => {
-      const rx = (Math.random() * 25 + 0.8).toFixed(1);
-      const tx = (Math.random() * 45 + 1.2).toFixed(1);
+      const sec = secretMap.get(session.name);
+      const profName = sec?.profile || '';
+
+      // Determine nominal speed based on package
+      let nominalDown = 18;
+      let nominalUp = 5;
+      if (profName.includes('10M')) {
+        nominalDown = 8.5;
+        nominalUp = 2.4;
+      } else if (profName.includes('20M')) {
+        nominalDown = 17.5;
+        nominalUp = 5.2;
+      } else if (profName.includes('50M')) {
+        nominalDown = 42.0;
+        nominalUp = 12.0;
+      } else if (profName.includes('100M') || profName.includes('Bisnis')) {
+        nominalDown = 84.0;
+        nominalUp = 35.0;
+      }
+
+      // Smooth realistic variance (+/- 10%)
+      const variance = (Math.sin(Date.now() / 8000 + session.name.length) * 0.15);
+      const rx = Math.max(0.4, +(nominalUp * (0.7 + variance)).toFixed(1));
+      const tx = Math.max(1.0, +(nominalDown * (0.75 + variance)).toFixed(1));
+
       return {
         ...session,
         rxRate: `${rx} Mbps`,
@@ -412,13 +444,20 @@ export class DemoDriver implements IRouterDriver {
   async updateProfile(name: string, patch: Partial<PppProfile>): Promise<PppProfile> {
     const idx = this.profiles.findIndex((p) => p.name === name);
     if (idx === -1) throw new Error(`Profile '${name}' tidak ditemukan.`);
+    const newName = patch.name && patch.name.trim() ? patch.name.trim() : name;
     this.profiles[idx] = {
       ...this.profiles[idx],
       ...patch,
-      name: patch.name || name,
+      name: newName,
       routerId: this.config.id,
       routerName: this.config.name,
     };
+
+    // If profile name changed, cascade to all secrets using this profile
+    if (newName !== name) {
+      this.secrets = this.secrets.map((s) => (s.profile === name ? { ...s, profile: newName } : s));
+    }
+
     this.persist();
     return this.profiles[idx];
   }

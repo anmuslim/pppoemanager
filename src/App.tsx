@@ -21,6 +21,15 @@ const MainLayout: React.FC = () => {
   const { user, loading } = useAuth();
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [tabLoading, setTabLoading] = useState(false);
+
+  const handleSelectTab = (tab: NavTab) => {
+    if (tab !== currentTab) {
+      setTabLoading(true);
+      setCurrentTab(tab);
+      setTimeout(() => setTabLoading(false), 450);
+    }
+  };
 
   // Auto redirect if current tab is restricted for this user
   React.useEffect(() => {
@@ -51,16 +60,27 @@ const MainLayout: React.FC = () => {
       <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 flex flex-col font-sans transition-colors">
         <Header onToggleMobileMenu={() => setMobileMenuOpen((prev) => !prev)} />
 
+        {/* Global Menu Loading Progress Bar */}
+        <div
+          className={`h-0.5 w-full bg-slate-100 dark:bg-zinc-900 overflow-hidden relative z-40 transition-opacity duration-200 ${
+            tabLoading ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
+        >
+          {tabLoading && (
+            <div className="h-full bg-gradient-to-r from-sky-500 via-indigo-500 to-sky-400 animate-progress-indeterminate" />
+          )}
+        </div>
+
         <div className="flex-1 flex overflow-hidden">
           <Sidebar
             currentTab={currentTab}
-            onSelectTab={setCurrentTab}
+            onSelectTab={handleSelectTab}
             mobileOpen={mobileMenuOpen}
             onCloseMobile={() => setMobileMenuOpen(false)}
           />
 
           <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto max-w-[1600px] w-full mx-auto">
-            {currentTab === 'dashboard' && <DashboardView onNavigateTo={setCurrentTab} />}
+            {currentTab === 'dashboard' && <DashboardView onNavigateTo={handleSelectTab} />}
             {currentTab === 'routers' && <RoutersView />}
             {currentTab === 'secrets' && <SecretsView />}
             {currentTab === 'active' && <ActiveView />}

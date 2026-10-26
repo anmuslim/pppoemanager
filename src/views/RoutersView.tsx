@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 export const RoutersView: React.FC = () => {
-  const { routers, refreshRouters, setSelectedRouterId, selectedRouterId } = useRouterContext();
+  const { routers, refreshRouters, setSelectedRouterId, selectedRouterId, loadingRouters } = useRouterContext();
   const { success, error, info } = useToast();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -197,6 +197,13 @@ export const RoutersView: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Loading Progress Indicator */}
+      {loadingRouters && (
+        <div className="h-1 w-full bg-sky-100/40 dark:bg-zinc-800 rounded-full overflow-hidden relative">
+          <div className="h-full bg-gradient-to-r from-sky-500 via-indigo-500 to-sky-400 animate-progress-indeterminate" />
+        </div>
+      )}
 
       {/* Router Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

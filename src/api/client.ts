@@ -180,6 +180,24 @@ export const api = {
           method: 'DELETE',
         }
       ),
+    bulkAction: (
+      routerId: string,
+      body: {
+        action: 'change_dns' | 'change_rate_limit' | 'change_local_address' | 'change_remote_address' | 'delete';
+        items: Array<{ name: string; routerId?: string }>;
+        dnsServer?: string;
+        rateLimit?: string;
+        localAddress?: string;
+        remoteAddress?: string;
+      }
+    ) =>
+      request<{ success: boolean; successCount: number; total: number; errors?: Record<string, string> }>(
+        `/api/routers/${encodeURIComponent(routerId)}/ppp/profiles/bulk-action`,
+        {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }
+      ),
   },
 
   queues: {

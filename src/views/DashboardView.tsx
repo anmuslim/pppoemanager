@@ -122,6 +122,13 @@ export const DashboardView: React.FC<{ onNavigateTo: (tab: any) => void }> = ({ 
         </button>
       </div>
 
+      {/* Top Progress Loading Indicator */}
+      {loading && (
+        <div className="h-1 w-full bg-sky-100/40 dark:bg-zinc-850 rounded-full overflow-hidden relative">
+          <div className="h-full bg-gradient-to-r from-sky-500 via-indigo-500 to-sky-400 animate-progress-indeterminate" />
+        </div>
+      )}
+
       {error && (
         <div className="p-3.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-lg text-xs text-rose-700 dark:text-rose-300">
           {error}

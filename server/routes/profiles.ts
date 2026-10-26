@@ -208,4 +208,70 @@ router.delete('/:name', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
+// POST bulk action on profiles
+router.post('/bulk-action', async (req: AuthenticatedRequest, res: Response) => {
+  const routerId = (req.params as any).routerId;
+  const { action, items, dnsServer, rateLimit, localAddress, remoteAddress } = req.body; // items: Array<{ name: string; routerId?: string }>
+
+  if (!action || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ success: false, error: 'Aksi dan daftar profile wajib diisi.' });
+  }
+
+  try {
+    let successCount = 0;
+    const errors: Record<string, string> = {};
+
+    for (const item of items) {
+      const targetRouterId = item.routerId || routerId;
+      try {
+        const target = await resolveProfileTarget(targetRouterId, item.name, item.routerId);
+        if (!target) throw new Error('Router tidak ditemukan');
+        const { driver } = target;
+
+        if (action === 'change_dns') {
+          if (dnsServer === undefined) throw new Error('DNS Server tidak ditentukan');
+          await driver.updateProfile(item.name, { dnsServer: dnsServer.trim() });
+          successCount++;
+        } else if (action === 'change_rate_limit') {
+          if (!rateLimit) throw new Error('Limitasi bandwidth tidak ditentukan');
+          await driver.updateProfile(item.name, { rateLimit: rateLimit.trim() });
+          successCount++;
+        } else if (action === 'change_local_address') {
+          if (localAddress === undefined) throw new Error('Local Address tidak ditentukan');
+          await driver.updateProfile(item.name, { localAddress: localAddress.trim() });
+          successCount++;
+        } else if (action === 'change_remote_address') {
+          if (remoteAddress === undefined) throw new Error('Remote Address (Pool) tidak ditentukan');
+          await driver.updateProfile(item.name, { remoteAddress: remoteAddress.trim() });
+          successCount++;
+        } else if (action === 'delete') {
+          await driver.deleteProfile(item.name);
+          successCount++;
+        }
+      } catch (err: any) {
+        errors[item.name] = err.message || 'Gagal memproses';
+      }
+    }
+
+    storage.addAuditLog({
+      username: req.user?.username || 'admin',
+      routerId: routerId,
+      routerName: routerId === 'all' ? 'Semua Router' : routerId,
+      action: action === 'delete' ? 'DELETE' : 'UPDATE',
+      targetType: 'PROFILE',
+      targetName: `${items.length} profiles`,
+      details: `Aksi massal [${action}] pada ${successCount} dari ${items.length} profile`,
+    });
+
+    res.json({
+      success: true,
+      successCount,
+      total: items.length,
+      errors: Object.keys(errors).length > 0 ? errors : undefined,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || 'Gagal menjalankan aksi massal profile' });
+  }
+});
+
 export default router;

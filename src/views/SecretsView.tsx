@@ -503,6 +503,7 @@ export const SecretsView: React.FC = () => {
         data={secrets}
         columns={columns}
         tableId="ppp_secrets"
+        loading={loading}
         searchPlaceholder="Cari username, IP, profile, komentar..."
         getRowId={(s) => s.name}
         isRowDisabled={(s) => s.disabled}
@@ -581,7 +582,6 @@ export const SecretsView: React.FC = () => {
               <input
                 type="text"
                 required
-                disabled={Boolean(editingSecret)}
                 value={formData.name || ''}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="user-pelanggan-01"
